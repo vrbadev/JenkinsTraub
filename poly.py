@@ -74,7 +74,7 @@ class Poly:
             return False
         else:
             size = self.size()
-            for i in xrange(size):
+            for i in range(size):
                 if (self.coeff[i] != other.coeff[i]):
                     return False
             return True
@@ -97,13 +97,12 @@ class Poly:
             Produces a string represenation of the polynomial given in terms of a tuple (x,y)
             where x is the coefficient of a term, and y is the power/degree of that term.
         """
-        s = '| '
+        l = list()
         pow = self.highest_degree()
         for x in self.coeff:
-            s += '(%s,%s), ' % (x, pow)
+            l.append('(%s)*(x^%d)' % (x, pow))
             pow -= 1
-        s += ' | '
-        return s
+        return ' + '.join(l)
 
     def __repr__(self):
         return self.__str__()
@@ -127,7 +126,7 @@ class Poly:
         if (equal_size_poly):
             result = []
             size = self.size()
-            for i in xrange(size):
+            for i in range(size):
                 val = self.coeff[i] + other.coeff[i]
                 result.append(val)
             return Poly(self.highest_degree(), result)
@@ -138,7 +137,7 @@ class Poly:
             # A sample addition looks like this:
             # [10][20][30][40] - big poly
             #         [55][66] - small poly.
-            for i in xrange(big_poly_size):
+            for i in range(big_poly_size):
                 big_poly_reverse_idx = (big_poly_size - 1) - i
                 small_poly_reverse_idx = (small_poly_size -1) - i
                 if (small_poly_reverse_idx < 0):
@@ -149,7 +148,7 @@ class Poly:
                     result.append(val)
             result.reverse()
             return Poly(big_poly.highest_degree(), result)
-
+    
 
     def get_derivative(self):
         """
@@ -158,7 +157,7 @@ class Poly:
         result = []
         size = self.size()
 
-        for i in xrange(size - 1): # skip constant term
+        for i in range(size - 1): # skip constant term
             curr_deg = self.get_power_at_index(i)
             curr_coeff = self.get_x_power_coeff(curr_deg)
             new_coeff = curr_deg * curr_coeff
@@ -185,7 +184,7 @@ class Poly:
                 break
 
         if norm_const is None:
-            print "Failed to Normalize Polynomial: %s" % self
+            print("Failed to Normalize Polynomial: %s" % self)
 
         for coeff in self.coeff:
             val = coeff / (1.0 * norm_const)
@@ -204,6 +203,14 @@ class Poly:
             i += 1
         return None
 
+    def strip(self):
+       deg  = self.get_highest_degree_of_non_zero_coeff()
+       if deg is None:
+           return Poly(0, [0.0])
+       if deg == self.highest_degree():
+           return self
+       return Poly(deg, self.coeff[(-deg-1):])
+
     def get_cauchy_poly(self):
         """
             Returns the Cauchy Polynomial from this polynomial
@@ -215,7 +222,7 @@ class Poly:
 
         do_normalize = False
         norm_const = 0
-        for i in xrange(size):
+        for i in range(size):
             if i == first_idx:
                 val = self.coeff[i]
                 if val != 1:
@@ -237,6 +244,39 @@ class Poly:
         return Poly(self.highest_degree(), result)
 
 
+    def __mul__(self, other):
+        new_degree = self.highest_degree() + other.highest_degree()
+        result = [0.0] * (new_degree + 1)
+        for i in range(self.highest_degree() + 1):
+            for j in range(other.highest_degree() + 1):
+                result[i + j] += self.coeff[i] * other.coeff[j]
+        return Poly(new_degree, result)
+        
+
+    def __divmod__(self, divisor):
+        remainder = self.get_copy()
+        rem_deg = remainder.highest_degree()
+        div_deg = divisor.highest_degree()
+        
+        result = Poly(0, [0.0])
+        while rem_deg >= div_deg:
+            curr_deg = rem_deg - div_deg
+            poly = Poly(curr_deg, [0.0] * (max(0, curr_deg) + 1))
+            quotient = (1.0 * remainder.coeff[-rem_deg-1]) / divisor.coeff[-div_deg-1]
+            poly.coeff[-curr_deg-1] = quotient
+            remainder -= divisor * poly
+            result += poly
+            rem_deg -= 1
+        
+        return result.strip(), remainder.strip()
+            
+    def __floordiv__(self, divisor):
+        return divmod(self, divisor)[0]
+    
+    def __mod__(self, divisor):
+        return divmod(self, divisor)[1]
+        
+
     def divide_linear_poly(self, x_coeff, x_const):
         """
             Divides this polynomial by given linear (1-degree_ polynomial
@@ -251,7 +291,7 @@ class Poly:
         dividend_idx = 0
         curr_deg = remainder.highest_degree()
         result = []
-        for i in xrange(num_iterations):
+        for i in range(num_iterations):
             quotient_coeff = (1.0 * remainder.coeff[dividend_idx]) / x_coeff
             result.append(quotient_coeff)
             term = Term(quotient_coeff,curr_deg - 1)
@@ -265,6 +305,7 @@ class Poly:
             curr_deg -= 1
 
         return Poly(self.highest_degree() - 1, result)
+    
     def __sub__(self, other):
         """
             Does polynomial subtraction in a non-destructive manner.
@@ -387,7 +428,7 @@ def get_empty_poly(deg):
         raise ValueError('Invalid polynomial degree')
     size = deg + 1
     result = []
-    for _ in xrange(size):
+    for _ in range(size):
         result.append(0)
     return Poly(deg, result)
 
@@ -431,14 +472,14 @@ def solve_poly_jt(poly, err = 10 **(-5)):
     # of the highest degree term
     num_roots = poly.highest_degree()
     ans = []
-    for i in xrange(num_roots):
+    for i in range(num_roots):
         root = solve_smallest_root_poly_jt(poly,err)
         ans.append(root)
         last_run = (num_roots - 1 == i)
         if VERBOSE_DEBUG:
-            print 'Solving Poly: %s ' % poly
-            print 'Found Root: %s' % root
-            print 'Negative Root: %s' % (-root)
+            print('Solving Poly: %s ' % poly)
+            print('Found Root: %s' % root)
+            print('Negative Root: %s' % (-root))
         if not last_run:
             # Deflate Polynomial to find next largest root
             # on next iteration
@@ -465,9 +506,12 @@ def solve_smallest_root_poly_jt(poly, err = 10 ** (-5)):
     M = 5 # 5 is empirically good for polynomials with degree < 50
     h_poly = poly.get_derivative()
     s = 0
-    for i in xrange(M):
+    for i in range(M):
+        ev = poly.eval(s)
+        if ev == 0:
+            break
         # Compute the next H-Polynomial
-        const = -h_poly.eval(s) / poly.eval(s)
+        const = -h_poly.eval(s) / ev
         pz_poly = poly.const_mult(const)
         adjust_h_poly = h_poly + pz_poly
 
@@ -486,9 +530,13 @@ def solve_smallest_root_poly_jt(poly, err = 10 ** (-5)):
         while not stage_two_success: # Retry Loop for Stage 2
             h_poly = initial_h_poly.get_copy()
             s = get_initial_s(poly) # pick a new s on each retry
-            for i in xrange(LIMIT):
+            for i in range(LIMIT):
+                ev = poly.eval(s)
+                if ev == 0:
+                    stage_two_success = True
+                    break
                 # Compute the next H-Polynomial
-                const = -h_poly.eval(s) / poly.eval(s)
+                const = -h_poly.eval(s) / ev
                 pz_poly = poly.const_mult(const)
                 adjust_h_poly = h_poly + pz_poly
 
@@ -505,7 +553,7 @@ def solve_smallest_root_poly_jt(poly, err = 10 ** (-5)):
                 # Termination Test
                 if i > 0 and abs(t_curr - t_prev) <= 0.5 * abs(t_prev) and abs(t_next - t_curr) <= 0.5 * abs(t_curr):
                     stage_two_success = True
-                    print 'Success Stage Two terminated correctly at L = %d' % i
+                    print('Success Stage Two terminated correctly at L = %d' % i)
                     break
 
                 t_prev = t_curr
@@ -513,7 +561,7 @@ def solve_smallest_root_poly_jt(poly, err = 10 ** (-5)):
 
 
             if not stage_two_success:
-                print 'Failed to terminate correctly in stage 2, retrying ...  '
+                print('Failed to terminate correctly in stage 2, retrying ...  ')
 
 
         # Stage 3
@@ -536,7 +584,7 @@ def solve_smallest_root_poly_jt(poly, err = 10 ** (-5)):
         s = s - (poly.eval(s) / (1.0 * h_bar_poly.eval(s)))
         prev_s = 0
         stage_3_success = False
-        for i in xrange(LIMIT):
+        for i in range(LIMIT):
             # Test for convergence / termination
             if abs(poly.eval(s)) < abs(err):
                 stage_3_success = True
@@ -568,12 +616,12 @@ def solve_smallest_root_poly_jt(poly, err = 10 ** (-5)):
                 break
 
         if stage_3_success:
-            print 'Stage 3 was successful'
-            print 'Root is estimated to be at %s' % s
+            print('Stage 3 was successful')
+            print('Root is estimated to be at %s' % s)
             root_found = True
         else: # Restart from Stage 2
             stage_two_success = False
-            print ' Stage 3 failure. Restarting algorithm'
+            print(' Stage 3 failure. Restarting algorithm')
 
     # Return the found root
     return s
